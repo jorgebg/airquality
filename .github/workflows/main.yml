@@ -1,0 +1,55 @@
+name: Build
+
+#on:
+#  schedule:
+#    - cron:  '0/15 * * * *'
+#   push:
+#     branches:
+#       - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checks-out the repository under $GITHUB_WORKSPACE
+    - uses: actions/checkout@v2
+      with:
+        # 100 last commits
+        fetch-depth: 100
+
+    - name: Run collector
+      env:
+        AWS_DEFAULT_REGION: 'eu-west-1'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      working-directory: ${{ github.workspace }}
+      run: |
+        git config --global user.email "airquality@jorgebg.com"
+        git config --global user.name "Air Quality Bot"
+        pip3 install setuptools
+        pip3 install boto3
+        python3 collector.py
+
+    - name: Process the data
+      working-directory: ${{ github.workspace }}
+      run: |
+        python3 processor.py
+        if git diff-files --quiet
+        then
+          echo "Data didn't change"
+        else
+          git add .
+          git commit -m"Publish metrics"
+          git push
+        fi
+
+    - name: Squash the commits of the day
+      working-directory: ${{ github.workspace }}
+      run: |
+        DATE=$(date +%F)
+        git rev-list -1 --before="${DATE}T00:00:00Z" master
+        git reset $(git rev-list -1 --before="${DATE}T00:00:00Z" master)
+        git add .
+        git commit -m"Metrics of $DATE"
+        git push -f

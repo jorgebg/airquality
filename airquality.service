@@ -1,0 +1,16 @@
+[Unit]
+Description=Air Quality service
+After=network.target
+
+[Service]
+Type=simple
+
+# Needs to read from /dev/ttyUSB0
+User=root
+WorkingDirectory=~
+ExecStart=/root/airquality.py
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
