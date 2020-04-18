@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Air Quality</title>
+  <meta name="description" content="Air Quality Monitoring Station">
+  <meta name="author" content="Jorge Barata">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel='shortcut icon' type='image/x-icon' href='favicon.png' />
+  <script src="https://cdn.plot.ly/plotly-1.53.0.min.js"></script>
+  <style>
+    body {
+      font-family: "Open Sans", verdana, arial, sans-serif;
+      color: #2A3F57;
+    }
+    main {
+      margin-right: auto;
+      margin-left: auto;
+      max-width: 960px;
+    }
+    .plot {
+      height: 100%;
+      width: 100%;
+    }
+    footer {
+      text-align: center;
+    }
+    h1 img {
+      height: 1em;
+      vertical-align: text-bottom;
+      padding-right: 0.5em;
+    }
+    th, td {
+      padding: 0 20px;
+      font-size: 90%;
+    }
+    big {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1><img src="airquality.svg">Air Quality</h1>
+
+    <table>
+      <tbody>
+        <tr>
+          <th><abbr title="Fine particulate matter with a diameter smaller than 2.5 micrometers (μm)">PM<sub>2.5</sub></abbr></th>
+          <th><abbr title="Coarse particulate matter with a diameter between 2.5 and 10 micrometers (μm)">PM<sub>10</sub></abbr></th>
+          <th>Last update</th>
+        </tr>
+        <tr>
+          <td><big id="pm25-update"></big></td>
+          <td><big id="pm10-update"></big></td>
+          <td id="last-update"></td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <div>
+
+      <div id="plot"></div>
+      <script type="text/javascript">
+        function start() {
+          Promise.all([
+            fetch('hourly.csv'),
+            fetch('data_gov.csv')
+          ])
+          .then(function (responses) {
+            processLastUpdate(responses[0].headers.get("Last-Modified"));  // Last-Modified: Tue, 21 Apr 2020 15:18:14 GMT
+            return Promise.all(responses.map(function (response) {
+              return response.text();
+          }));
+          }).then(function (data) {
+            makePlot(
+                Plotly.d3.csv.parse(data[0]),
+                Plotly.d3.csv.parse(data[1])
+            );
+          }).catch(function (error) {
+            console.log(error);
+          });
+        };
+
+
+        function processLastUpdate(lastModified) {
+          let date = new Date(lastModified);
+          document.getElementById("last-update").innerHTML = date.toLocaleString();
+        }
+
+        function rowsToScatter(rows) {
+          var x_dates = [],
+            y_pm25 = [],
+            y_pm10 = [];
+
+          for (var i = 0; i < rows.length; i++) {
+            row = rows[i];
+            x_dates.push(new Date(parseInt(row['ts']) * 1000)); // Already with timezone
+            y_pm25.push(Number(row['pm25']));
+            y_pm10.push(Number(row['pm10']));
+          }
+          return [x_dates, y_pm25, y_pm10];
+        }
+
+        function makePlot(rows, rowsGov) {
+          // Local station
+          var [x_dates, y_pm25, y_pm10] = rowsToScatter(rows);
+
+          // Gov station
+          var [x_dates_gov, y_pm25_gov, y_pm10_gov] = rowsToScatter(rowsGov);
+
+
+          var data = [{
+            x: x_dates,
+            y: y_pm25,
+            type: 'scatter',
+            name: "PM 2.5",
+          },{
+          // Goverment doesn't collect PM2.5 data yet
+          //   x: x_dates_gov,
+          //   y: y_pm25_gov,
+          //   type: 'scatter',
+          //   "name": "PM 2.5 (gov)",
+          // }, {
+            x: x_dates,
+            y: y_pm10,
+            xaxis: 'x2',
+            yaxis: 'y2',
+            type: 'scatter',
+            name: "PM 10",
+          },{
+            x: x_dates_gov,
+            y: y_pm10_gov,
+            xaxis: 'x2',
+            yaxis: 'y2',
+            type: 'scatter',
+            name: "PM 10 (gov)",
+          }];
+
+
+          const pm25_limit = Math.max(...y_pm25);
+          const pm25_zones =[
+              ["#79bc6a", [0, 15]],
+              ["#bbcf4c", [15, 30]],
+              ["#eec20b", [30, 55]],
+              ["#f29305", [55, 110]],
+              ["#e8416f", [110, Math.max(110, pm25_limit+10)]],
+          ];
+
+          const pm10_limit = Math.max(...y_pm10);
+          const pm10_zones =[
+              ["#79bc6a", [0, 25]],
+              ["#bbcf4c", [25, 50]],
+              ["#eec20b", [50, 90]],
+              ["#f29305", [90, 180]],
+              ["#e8416f", [180, Math.max(180, pm10_limit+10)]],
+          ];
+
+
+          function get_color(value, zones) {
+            for ([color, [lower, upper]] of zones) {
+              if (lower <= value && value < upper) {
+                return color;
+              }
+            }
+          }
+
+
+          document.getElementById("pm25-update").innerHTML = y_pm25[y_pm25.length-1];
+          document.getElementById("pm25-update").style = "color:" + get_color(y_pm25[y_pm25.length-1], pm25_zones);
+          document.getElementById("pm10-update").innerHTML = y_pm10[y_pm10.length-1];
+          document.getElementById("pm10-update").style = "color:" + get_color(y_pm10[y_pm10.length-1], pm10_zones);
+
+
+          const shapes = [];
+          const zone_set = [
+            ['PM 2.5 limit', pm25_zones, pm25_limit, "y"],
+            ['PM 10 limit', pm10_zones, pm10_limit, "y2"],
+          ];
+
+          for ([name, zones, limit, yref] of zone_set) {
+            for ([color, [lower, upper]] of zones) {
+                if (limit > lower) {
+                  shapes.push({
+                    "fillcolor": color,
+                    "layer": "below",
+                    "line": {
+                      "width": 0
+                    },
+                    "name": name,
+                    "opacity": 0.2,
+                    "type": "rect",
+                    "x0": x_dates[0],
+                    "x1": x_dates[x_dates.length - 1],
+                    "xref": "x",
+                    "y0": lower,
+                    "y1": upper,
+                    "yref": yref
+                  })
+                }
+            }
+          }
+
+
+          Plotly.newPlot("plot", data, {
+            "title": "μg/m3 average per hour",
+            "hovermode": "x unified",
+            "grid": {
+              rows: 2,
+              columns: 1,
+              pattern: 'independent',
+            },
+            "xaxis": {
+              "matches": "x2",
+              "showticklabels": false,
+              "type": "date",
+              "rangeselector": {
+                "buttons": [{
+                  "count": 7,
+                  "label": "1w",
+                  "step": "day",
+                  "stepmode": "backward"
+                }, {
+                  "count": 1,
+                  "label": "1m",
+                  "step": "month",
+                  "stepmode": "backward"
+                }, {
+                  "count": 6,
+                  "label": "6m",
+                  "step": "month",
+                  "stepmode": "backward"
+                }, {
+                  "count": 1,
+                  "label": "YTD",
+                  "step": "year",
+                  "stepmode": "todate"
+                }, {
+                  "count": 1,
+                  "label": "1y",
+                  "step": "year",
+                  "stepmode": "backward"
+                }, {
+                  "step": "all"
+                }]
+              }
+            },
+            shapes: shapes,
+          }, {
+            "responsive": true
+          });
+        };
+        start();
+      </script>
+    </div>
+
+
+    <h3>Sources</h3>
+    <ul>
+      <li><a href="https://github.com/jorgebg/airquality" target="_blank">My own air quality monitoring station</a></li>
+      <li><a href="https://idem.madrid.org/visor/?v=calidadaire&ZONE=430000,4485000,8" target="_blank">Government’s open data</a></li>
+    </ul>
+    <br />
+
+    <h2> European Union: CAQI Air quality index </h2>
+    <table style="text-align:center;">
+
+      <tbody>
+        <tr>
+          <th>Qualitative name</th>
+          <th colspan="2">Hourly concentration (μg/m<sup>3)</sup>
+          </th>
+        </tr>
+        <tr>
+          <th></th>
+          <th>PM<sub>2.5</sub></th>
+          <th>PM<sub>10</sub></th>
+        </tr>
+        <tr>
+          <td style="background:#79bc6a;">Very low</td>
+          <td>0–15</td>
+          <td>0–25</td>
+        </tr>
+        <tr>
+          <td style="background:#bbcf4c;">Low</td>
+          <td>15–30</td>
+          <td>25–50</td>
+        </tr>
+        <tr>
+          <td style="background:#eec20b;">Medium</td>
+          <td>30–55</td>
+          <td>50–90</td>
+        </tr>
+        <tr>
+          <td style="background:#f29305;">High</td>
+          <td>55–110</td>
+          <td>90–180</td>
+        </tr>
+        <tr>
+          <td style="background:#e8416f;">Very high</td>
+          <td>&gt;110</td>
+          <td>&gt;180</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><a href="https://www.airqualitynow.eu/download/CITEAIR-Comparing_Urban_Air_Quality_across_Borders.pdf">Source</a></p>
+    <br />
+
+    <h2> WHO Air quality guideline values for PM</h2>
+
+    <table>
+      <tbody>
+        <tr>
+          <th>Timerange</th>
+          <th colspan="2">Safety levels (μg/m<sup>3)</th>
+        </tr>
+        <tr>
+          <th></th>
+          <th>PM<sub>2.5</sub></th>
+          <th>PM<sub>10</sub></th>
+        </tr>
+        <tr>
+          <td>Annual mean</td>
+          <td>&lt;10</td>
+          <td>&lt;20</td>
+        </tr>
+        <tr>
+          <td>24-hour mean</td>
+          <td>&lt;25</td>
+          <td>&lt;50</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+
+    <p><a href="https://www.who.int/news-room/fact-sheets/detail/ambient-(outdoor)-air-quality-and-health">Source</a></p>
+
+
+    <footer>
+      <small>Made by <a href="http://jorgebg.com">Jorge Barata</a> | <a href="https://github.com/jorgebg/airquality">Source Code</a></small>
+    </footer>
+  </main>
+</body>
+
+</html>
