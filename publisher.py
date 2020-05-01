@@ -61,10 +61,3 @@ with open('.state/data.csv', 'r') as datafile, open('.gh-pages/hourly.csv', 'w')
             current_hour = msg.datehour
             pm25 = []
             pm10 = []
-
-
-# Download data from public station
-try:
-    run("curl 'https://idem.madrid.org/geoserver3/proxy?https://gestiona3.madrid.org/mova_rest_servicios/v1/consultas/do?&idApp=5&idConsulta=sigi_azul_semana_particula&first=1&limit=1440&pq1=I:11&pq2=I:4' -o .gh-pages/idem_hourly.json")
-except RuntimeError:
-    logger.warning("Couldn't download data from public station")
