@@ -2,7 +2,7 @@
 
 ## Architecture
 
-| Monitoring Station         | → | Message Queue | → | Data Collector | → | Data Publisher | → | Static Website |
+| Monitoring Station         | ⇨ | Message Queue | ⇨ | Data Collector | ⇨ | Data Publisher | ⇨ | Static Website |
 | -                          | - | -             | - | -              | - | -              | - | -              |
 | Raspberry Pi Zero + SDS011 |   | AWS SQS       |   | GitHub Actions |   | GitHub Actions |   | GitHub Pages   |
 
