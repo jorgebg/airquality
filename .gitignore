@@ -2,3 +2,7 @@
 __pycache__
 .env
 .aws.config
+
+# Stateful Action
+.state/
+.gh-pages/

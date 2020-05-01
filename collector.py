@@ -23,6 +23,7 @@ def run(command):
 queue = boto3.resource('sqs').get_queue_by_name(QueueName='airquality.fifo')
 
 
+os.chdir('.state')
 with open('data.csv', 'a+', buffering=1) as csvfile:  # Line buffered
     total = 0
     while True:

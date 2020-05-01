@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal, getcontext
 import logging
 import os
+import shutil
 from statistics import mean
 import sys
 
@@ -11,6 +12,10 @@ logging.basicConfig(level=os.getenv('LOGGING_LEVEL', 'INFO'))
 
 logger = logging.getLogger(__name__)
 
+# Copy web folder
+shutil.copytree('web/', '.gh-pages/', dirs_exist_ok=True)
+
+# Compute hourly averages
 getcontext().prec = 3
 
 def message_date(message):
@@ -39,7 +44,7 @@ class Message:
 
 current_hour = None
 
-with open('data.csv', 'r') as datafile, open('hourly.csv', 'w') as hourlyfile:
+with open('.state/data.csv', 'r') as datafile, open('.gh-pages/hourly.csv', 'w') as hourlyfile:
     pm25 = []
     pm10 = []
     hourlyfile.write('ts,pm25,pm10\n')
@@ -56,3 +61,4 @@ with open('data.csv', 'r') as datafile, open('hourly.csv', 'w') as hourlyfile:
             current_hour = msg.datehour
             pm25 = []
             pm10 = []
+
