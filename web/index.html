@@ -65,18 +65,24 @@
 
       <div id="plot"></div>
       <script type="text/javascript">
-        function makeplot() {
-          var xhr = new XMLHttpRequest();
-          xhr.onload = function () {
-          	if (xhr.status >= 200 && xhr.status < 300) {
-          		processData(xhr.responseText);
-              processLastUpdate(xhr.getResponseHeader("Last-Modified"));  // Last-Modified: Tue, 21 Apr 2020 15:18:14 GMT
-          	} else {
-          		console.log(xhr.responseText);
-          	}
-          };
-          xhr.open('GET', 'hourly.csv');
-          xhr.send();
+        function start() {
+          Promise.all([
+            fetch('hourly.csv'),
+            fetch('data_gov.csv')
+          ])
+          .then(function (responses) {
+            processLastUpdate(responses[0].headers.get("Last-Modified"));  // Last-Modified: Tue, 21 Apr 2020 15:18:14 GMT
+            return Promise.all(responses.map(function (response) {
+              return response.text();
+          }));
+          }).then(function (data) {
+            makePlot(
+                Plotly.d3.csv.parse(data[0]),
+                Plotly.d3.csv.parse(data[1])
+            );
+          }).catch(function (error) {
+            console.log(error);
+          });
         };
 
 
@@ -85,9 +91,7 @@
           document.getElementById("last-update").innerHTML = date.toLocaleString();
         }
 
-        function processData(csvText) {
-          var rows = Plotly.d3.csv.parse(csvText);
-
+        function rowsToScatter(rows) {
           var x_dates = [],
             y_pm25 = [],
             y_pm10 = [];
@@ -98,19 +102,41 @@
             y_pm25.push(Number(row['pm25']));
             y_pm10.push(Number(row['pm10']));
           }
+          return [x_dates, y_pm25, y_pm10];
+        }
+
+        function makePlot(rows, rowsGov) {
+          // Local station
+          var [x_dates, y_pm25, y_pm10] = rowsToScatter(rows);
+
+          // Gov station
+          var [x_dates_gov, y_pm25_gov, y_pm10_gov] = rowsToScatter(rowsGov);
+
 
           var data = [{
             x: x_dates,
             y: y_pm25,
             type: 'scatter',
-            "name": "PM 2.5",
-          }, {
+            name: "PM 2.5",
+          },{
+          //   x: x_dates_gov,
+          //   y: y_pm25_gov,
+          //   type: 'scatter',
+          //   "name": "PM 2.5 gov",
+          // }, {
             x: x_dates,
             y: y_pm10,
             xaxis: 'x2',
             yaxis: 'y2',
             type: 'scatter',
-            "name": "PM 10",
+            name: "PM 10",
+          },{
+            x: x_dates_gov,
+            y: y_pm10_gov,
+            xaxis: 'x2',
+            yaxis: 'y2',
+            type: 'scatter',
+            name: "PM 10 gov",
           }];
 
 
@@ -226,7 +252,7 @@
             "responsive": true
           });
         };
-        makeplot();
+        start();
       </script>
     </div>
 

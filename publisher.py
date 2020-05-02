@@ -65,4 +65,6 @@ with open('.state/data.csv', 'r') as datafile, open('.gh-pages/hourly.csv', 'w')
 
 # Publish also collected gov data if it exists
 if os.path.exists('.state/data_gov.csv'):
-    shutil.copy('.state/data_gov.csv', '.gh-pages/data_gov.csv')
+    with open('.state/data_gov.csv', 'r') as source_file, open('.gh-pages/data_gov.csv', 'w') as output_file:
+        output_file.write('ts,pm25,pm10\n')
+        output_file.write(source_file.read())
