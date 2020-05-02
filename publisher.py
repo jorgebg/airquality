@@ -61,3 +61,8 @@ with open('.state/data.csv', 'r') as datafile, open('.gh-pages/hourly.csv', 'w')
             current_hour = msg.datehour
             pm25 = []
             pm10 = []
+
+
+# Publish also collected gov data if it exists
+if os.path.exists('.state/data_gov.csv'):
+    shutil.copy('.state/data_gov.csv', '.gh-pages/data_gov.csv')
