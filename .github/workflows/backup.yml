@@ -10,7 +10,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      branch: state
+      with:
+        ref: state
 
     - name: Set up Git
       env:
