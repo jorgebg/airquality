@@ -17,5 +17,5 @@ jobs:
       env:
         AWS_S3_URI: ${{ secrets.AWS_S3_URI }}
       run: |
-        aws s3 sync . s3://$AWS_S3_URI
+        aws s3 sync . $AWS_S3_URI
  
