@@ -13,7 +13,7 @@ jobs:
       with:
         ref: state
 
-    - name: Set up Git
+    - name: Sync to S3
       env:
         AWS_S3_URI: ${{ secrets.AWS_S3_URI }}
       run: |
