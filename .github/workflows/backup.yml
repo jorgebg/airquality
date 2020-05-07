@@ -1,0 +1,20 @@
+name: Build
+
+on:
+ schedule:
+   - cron:  '0 * * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      branch: state
+
+    - name: Set up Git
+      env:
+        AWS_S3_URI: ${{ secrets.AWS_S3_URI }}
+      run: |
+        aws s3 sync . s3://$AWS_S3_URI
+ 
