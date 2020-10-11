@@ -8,6 +8,9 @@ import shutil
 from statistics import mean
 import sys
 
+MALFUNCTION_THRESHOLD_PM25 = 999.9
+MALFUNCTION_THRESHOLD_PM10 = 1999.9
+
 logging.basicConfig(level=os.getenv('LOGGING_LEVEL', 'INFO'))
 
 logger = logging.getLogger(__name__)
@@ -52,8 +55,10 @@ with open('.state/data.csv', 'r') as datafile, open('.gh-pages/hourly.csv', 'w')
         msg = Message(*line.split(','))
         if current_hour is None:
             current_hour = msg.datehour
-        pm25.append(msg.pm25)
-        pm10.append(msg.pm10)
+        if msg.pm25 < MALFUNCTION_THRESHOLD_PM25:
+            pm25.append(msg.pm25)
+        if msg.pm10 < MALFUNCTION_THRESHOLD_PM10:
+            pm10.append(msg.pm10)
 
         if msg.datehour != current_hour:
             hourlyfile.write('{},{},{}\n'.format(int(datetime.timestamp(msg.datehour)), mean(pm25), mean(pm10)))
