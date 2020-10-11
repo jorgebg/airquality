@@ -61,8 +61,11 @@ with open('.state/data.csv', 'r') as datafile, open('.gh-pages/hourly.csv', 'w')
             pm10.append(msg.pm10)
 
         if msg.datehour != current_hour:
-            hourlyfile.write('{},{},{}\n'.format(int(datetime.timestamp(msg.datehour)), mean(pm25), mean(pm10)))
-            logger.info('{},{},{}'.format(msg.datehour, mean(pm25), mean(pm10)))
+            if pm25 and pm10:
+                hourlyfile.write('{},{},{}\n'.format(int(datetime.timestamp(msg.datehour)), mean(pm25), mean(pm10)))
+                logger.info('{},{},{}'.format(msg.datehour, mean(pm25), mean(pm10)))
+            else:
+                logger.warn('No data points where found. Possible reading malfunction.')
             current_hour = msg.datehour
             pm25 = []
             pm10 = []
