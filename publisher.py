@@ -8,8 +8,8 @@ import shutil
 from statistics import mean
 import sys
 
-MALFUNCTION_THRESHOLD_PM25 = 999.9
-MALFUNCTION_THRESHOLD_PM10 = 1999.9
+MALFUNCTION_THRESHOLD_PM25 = 500 # Limit is 999.9
+MALFUNCTION_THRESHOLD_PM10 = 1000 # Limit is 1999.9
 
 logging.basicConfig(level=os.getenv('LOGGING_LEVEL', 'INFO'))
 
